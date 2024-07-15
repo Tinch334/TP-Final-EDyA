@@ -128,6 +128,9 @@ int main(int argc, char const *argv[])
     //Seed the random number generator.
     srand(time(NULL));
 
+    no_sensor_solver_v1(mi);
+    puts("\nMaze solved");
+
     mazeinfo_destroy(mi);
     fclose(mazeFile);
 

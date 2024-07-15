@@ -1,5 +1,6 @@
 #ifndef __MAZE_H__
 #define __MAZE_H__
+#include "point.h"
 #include <stdlib.h>
 
 //Has all the possible states for a cell in the maze.
@@ -15,21 +16,6 @@ typedef enum {
     K_VISITED,
     K_UNKNOWN
 } MazeKnowledge;
-
-//All possible moves the robot can perform.
-typedef enum {
-    MOVE_L,
-    MOVE_R,
-    MOVE_D,
-    MOVE_U
-} Moves;
-
-//A generic point structure.
-typedef struct {
-    int x;
-    int y;
-} _Point;
-typedef _Point *Point;
 
 //The maze structure, we use a double pointer to be able to define a 2D array of unspecified dimensions, this method requires more setup than
 //using a linear array as 2D, but simplifies accessing the array.
@@ -59,6 +45,6 @@ void mazeinfo_destroy(MazeInfo mi);
 
 //Takes a "MazeInfo" structure, returns a path from the start to the end position, the algorithm assumes that there's at least one valid path.
 //The string returned by the function needs to be freed after use.
-char *noSensorSolverV1(MazeInfo mi);
+char *no_sensor_solver_v1(MazeInfo mi);
 
 #endif /* __MAZE_H_ */

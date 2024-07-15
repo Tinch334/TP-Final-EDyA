@@ -1,5 +1,7 @@
 #include "maze.h"
 #include "stack/stack.h"
+#include "point.h"
+#include "robot.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -19,16 +21,11 @@ static int valid_position(const Maze m, const Point p) {
     return m->maze[p->y][p->x] == EMPTY;
 }
 
-//Returns 1 if the given points have the same X and Y coordinates.
-static int equal_points(const Point p1, const Point p2) {
-    return p1->x == p2->x && p1->y == p2->y;
-}
-
 //Moves the given point one unit in the given direction
 static void point_move(Point point, Moves move) {
     switch (move) {
     case MOVE_L:
-        point->x++;
+        (point->x)--;
         puts("Move left");
         break;
     case MOVE_R:
@@ -54,23 +51,23 @@ static int choose_move(const MazeInfo mi, MazeKnowledge discoveredMaze[mi->maze-
 
     //Check if we are next to the exit, if so move to it. Note that this only checks for direct adjacency, meaning being diagonal to the exit
     //does not count, this is because the robot can't move diagonally.
-    int yDiff = currentYPos - mi->end->y;
-    int xDiff = currentXPos - mi->end->x;
+    int yDiff = (int)currentYPos - mi->end->y;
+    int xDiff = (int)currentXPos - mi->end->x;
 
-    if (yDiff == 0) {
-        if (xDiff == 1)
-            *chosenMove = MOVE_L;
-        else
-            *chosenMove = MOVE_R;
-
+    if (yDiff == 0 && xDiff == 1) {
+        *chosenMove = MOVE_L;
         return 1;
     }
-    else if (xDiff == 0) {
-        if (yDiff == 1)
-            *chosenMove = MOVE_U;
-        else
-            *chosenMove = MOVE_D;
-
+    else if (yDiff == 0 && xDiff == (-1)) {
+        *chosenMove = MOVE_R;
+        return 1;
+    }
+    else if (xDiff == 0 && yDiff == 1) {
+        *chosenMove = MOVE_U;
+        return 1;
+    }
+    else if (xDiff == 0 && yDiff == (-1)) {
+        *chosenMove = MOVE_D;
         return 1;
     }
 
@@ -80,6 +77,8 @@ static int choose_move(const MazeInfo mi, MazeKnowledge discoveredMaze[mi->maze-
     size_t moveIndex = 0;
 
     //Move left, first we check that we are not on the left edge of the maze.
+    //fprintf(stdout, "\nCurrentY: %ld - CurrentX: %ld\n", currentYPos, currentXPos);
+
     if (currentXPos > 0)
         if (discoveredMaze[currentYPos][currentXPos - 1] == K_UNKNOWN)
             possibleMoves[moveIndex++] = MOVE_L;
@@ -94,6 +93,7 @@ static int choose_move(const MazeInfo mi, MazeKnowledge discoveredMaze[mi->maze-
         if (discoveredMaze[currentYPos - 1][currentXPos] == K_UNKNOWN)
             possibleMoves[moveIndex++] = MOVE_U;
 
+
     //Move up, first we check that we are not on the bottom edge of the maze.
     if (currentYPos < mi->maze->sizeY - 1)
         if (discoveredMaze[currentYPos + 1][currentXPos] == K_UNKNOWN)
@@ -104,12 +104,25 @@ static int choose_move(const MazeInfo mi, MazeKnowledge discoveredMaze[mi->maze-
         return 0;
 
     //Choose a random move from all available moves.
-    size_t chosenIndex = rand_range(0, moveIndex);
+    size_t chosenIndex = rand_range(0, moveIndex - 1);
     *chosenMove = possibleMoves[chosenIndex];
 
     return 1;
 }
 
+//Takes a move and returns it's inverse.
+static Moves invert_move(const Moves move) {
+    switch (move) {
+    case MOVE_L:
+        return MOVE_R;
+    case MOVE_R:
+        return MOVE_L;
+    case MOVE_D:
+        return MOVE_U;
+    case MOVE_U:
+        return MOVE_D;
+    }
+}
 
 /*
     PUBLIC FUNCTIONS
@@ -164,35 +177,50 @@ char *no_sensor_solver_v1(MazeInfo mi) {
     size_t mazeSizeX = mi->maze->sizeX;
     //This array denotes the parts of the maze the robot has "discovered".
     MazeKnowledge discoveredMaze[mazeSizeY][mazeSizeX];
+    //The backtracking stack is used so the robot can go back through the path they followed in case they reach a dead end.
+    Stack backtrackingStack = stack_create();
 
     //Set all the tiles in the discovered maze to unknown.
     for (size_t y = 0; y < mazeSizeY; y++)
         for (size_t x = 0; x < mazeSizeX; x++)
             discoveredMaze[y][x] = K_UNKNOWN;
 
-    while (!equal_points(mi->position, mi->end)) {
-        //If the robot is standing in a position then it has been visited.
-        discoveredMaze[mi->start->y][mi->start->x] = K_VISITED;
+    while (!point_equal(mi->position, mi->end)) {
         Moves chosenMove;
+
+        //If the robot is standing in a position then it has been visited.
+        discoveredMaze[mi->position->y][mi->position->x] = K_VISITED;
 
         //If no valid moves where found we use the stack to "go back" to the previous position.
         if (!choose_move(mi, discoveredMaze, &chosenMove)) {
-            //IMPORTANT!!!!
-            //Implement backtracking stack. Remember to add the performed move to a stack if it's valid.
+            //Get the previous move from the stack.
+            Moves *previousMove = malloc(sizeof(Moves));
+            previousMove = stack_pop(&backtrackingStack, (DestroyFunction)move_destroy, (CopyFunction)move_copy);
+            assert(previousMove != NULL);
+            //Move to the inverse of the previous move. Since doing the inverse means we are going to an already visited cell we know it's
+            //valid, no need to verify.
+            point_move(mi->position, invert_move(*previousMove));
+
+            free(previousMove);
         }
-        //Perform the chosen move.
         else {
             //Perform the move to the position given by the move function, then check if it's valid. Note the use of "_Point", since "Point"
             //is a pointer and would require memory allocation.
             _Point newPosition = {.x = mi->position->x, .y = mi->position->y};
             point_move(&newPosition, chosenMove);
 
-            //If we moved into a valid position update the robots position.
+            //If we moved into a valid position update the robot's position and add the move to the stack.
             if (valid_position(mi->maze, &newPosition)) {
                 mi->position->y = newPosition.y;
                 mi->position->x = newPosition.x;
-            }
 
+                //IMPORTANT!!!!
+                //REMOVE, FOR DISPLAY ONLY.
+                //IMPORTANT!!!!
+                discoveredMaze[mi->position->y][mi->position->x] = K_VISITED;
+
+                stack_push(&backtrackingStack, (CopyFunction)move_copy, &chosenMove);
+            }
             //If we moved into a wall mark it as such and don't move the robot.
             else
                 discoveredMaze[newPosition.y][newPosition.x] = K_WALL;
