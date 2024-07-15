@@ -1,4 +1,5 @@
 #include "maze.h"
+#include "first_solver.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -17,7 +18,7 @@ static MazeInfo generate_file(FILE *mazeFile) {
     MazeInfo mi = mazeinfo_create();
 
     //Read variables in first three lines.
-    if (fscanf(mazeFile, "%ld %ld %ld", &mi->maze->sizeY, &mi->maze->sizeX, &mi->sensorRange) != 3)
+    if (fscanf(mazeFile, "%ld %ld %ld", &mi->maze->sizeY, &mi->maze->sizeX, &mi->robot->sensorRange) != 3)
         _format_error_handler(mi, "Incorrect amount/type of variables, in line", 1);
 
     if (fscanf(mazeFile, "%d %d", &mi->start->y, &mi->start->x) != 2)
@@ -91,8 +92,8 @@ static MazeInfo generate_file(FILE *mazeFile) {
         _format_error_handler(mi, "End must be an empty tile, in line", mi->end->y);
 
     //The robots starting position is specified in the file.
-    mi->position->y = mi->start->y;
-    mi->position->x = mi->start->x;
+    mi->robot->position->y = mi->start->y;
+    mi->robot->position->x = mi->start->x;
     
     return mi;
 }
