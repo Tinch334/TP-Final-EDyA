@@ -119,12 +119,14 @@ int main(int argc, char const *argv[])
     //Get maze info.
     MazeInfo mi = generate_file(mazeFile);
 
+    /*
     for (size_t i = 0; i < mi->maze->sizeY; i++) {
         for (size_t j = 0; j < mi->maze->sizeX; j++)
             fprintf(stdout, "%d", mi->maze->maze[i][j]);
 
         puts("");
     }
+    */
 
     //Seed the random number generator.
     srand(time(NULL));

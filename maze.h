@@ -2,6 +2,7 @@
 #define __MAZE_H__
 #include <stdlib.h>
 
+
 //Has all the possible states for a cell in the maze.
 typedef enum {
     EMPTY,
