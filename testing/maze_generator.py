@@ -43,7 +43,11 @@ def valid_position(maze: Maze, x: int, y: int) -> bool:
 #Verifies the maze using a form of BFS traversal. Each time we go to a cell we check if it's valid and not marked, if so we mark it and check
 #all of it's neighbours. This continues until we either reach the exit or run out of cells.
 def maze_verify(maze: Maze):
+    #Check that the start and end are not walls and are different.
     if (maze.maze[maze.start[0]][maze.start[1]] == WALL) or (maze.maze[maze.end[0]][maze.end[1]] == WALL):
+        return False
+
+    if (maze.start[0] == maze.end[0] and maze.start[1] == maze.end[1]):
         return False
 
     #All the maze starts unmarked.

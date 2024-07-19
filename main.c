@@ -132,7 +132,6 @@ int main(int argc, char const *argv[])
     srand(time(NULL));
 
     no_sensor_solver_v1(mi);
-    puts("\nMaze solved");
 
     mazeinfo_destroy(mi);
     fclose(mazeFile);
