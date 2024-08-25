@@ -58,6 +58,11 @@ int valid_position(const Maze m, const Point p) {
     return m->maze[p.y][p.x] == EMPTY;
 }
 
+Point create_point(int x, int y) {
+    Point p = {.x = x, .y = y};
+    return p;
+}
+
 int point_equal(const Point p1, const Point p2) {
     return p1.y == p2.y && p1.x == p2.x;
 }

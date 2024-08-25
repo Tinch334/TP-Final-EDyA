@@ -66,6 +66,9 @@ void initialize_robot(MazeInfo mi);
 //Returns 1 if the given position is empty in the given maze.
 int valid_position(const Maze m, const Point p);
 
+//Creates and returns a point with the given coordinates.
+Point create_point(int x, int y);
+
 //Returns 1 if the given points have the same X and Y coordinates.
 int point_equal(const Point p1, const Point p2);
 
