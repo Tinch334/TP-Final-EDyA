@@ -4,7 +4,7 @@
 
 typedef struct {
     char *string;
-    size_t length;
+    size_t ptr;
     size_t size;
 } _CString;
 typedef _CString *CString;

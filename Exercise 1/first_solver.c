@@ -1,10 +1,11 @@
 #include "first_solver.h"
 #include "maze.h"
-#include "stack/stack.h"
+#include "utils/stack.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 #include <math.h>
+#include <limits.h>
 
 
 //Generates a random number between min and max. Note that the output is not perfectly distributed, however a more balanced version would
@@ -22,25 +23,22 @@ static size_t get_distance(Point p1, Point p2) {
 //no moves are possible the function returns 0, otherwise 1.
 static int choose_move(const MazeInfo mi, Moves *chosenMove) {
     //Instead of checking each direction manually we check all of them using a loop.
-    Point checkDirections[4] = {create_point(-1, 0), create_point(1, 0), create_point( 0, -1), create_point(0, 1)};
+    Point checkDirections[4] = {point_create(-1, 0), point_create(1, 0), point_create(0, -1), point_create(0, 1)};
     Moves moveDirections[4] = {MOVE_L, MOVE_R, MOVE_U, MOVE_D};
     //We set the best distance to an impossibly large size, to ensure any valid distance will be better.
-    size_t bestDistance = mi->maze->sizeX * mi->maze->sizeY + 1;
+    size_t bestDistance = INT_MAX;
     int setDirection = 0;
 
     for (size_t i = 0; i < 4; i++) {
-        Point newPosition = {.x = mi->robot->position.x + checkDirections[i].x, .y = mi->robot->position.y + checkDirections[i].y};
-        //Make sure the new position is inside the maze.
-        if (newPosition.x >= 0 && newPosition.x < mi->maze->sizeX && newPosition.y >= 0 && newPosition.y < mi->maze->sizeY) {
-            if (mi->robot->knowledgeGrid[newPosition.y][newPosition.x] == K_UNKNOWN) {
-                size_t newDistance = get_distance(newPosition, mi->end);
-                //If the new distance is better we update it. If the new and current best distance are the same the decision is made randomly.
-                if (newDistance < bestDistance || (newDistance == bestDistance && rand_range(1, 10) > 5)) {
-                    setDirection = 1;
+        Point newPosition = point_create(mi->robot->position.x + checkDirections[i].x, mi->robot->position.y + checkDirections[i].y);
+        if (get_position_knowledge(mi, newPosition)) {
+            size_t newDistance = get_distance(newPosition, mi->end);
+            //If the new distance is better we update it. If the new and current best distance are the same the decision is made randomly.
+            if (newDistance < bestDistance || (newDistance == bestDistance && rand_range(1, 10) > 5)) {
+                setDirection = 1;
 
-                    bestDistance = newDistance;
-                    *chosenMove = moveDirections[i];
-                }
+                bestDistance = newDistance;
+                *chosenMove = moveDirections[i];
             }
         }
     }
@@ -49,11 +47,6 @@ static int choose_move(const MazeInfo mi, Moves *chosenMove) {
 }
 
 void no_sensor_solver(MazeInfo mi) {
-    initialize_robot(mi);
-
-    size_t mazeSizeY = mi->maze->sizeY;
-    size_t mazeSizeX = mi->maze->sizeX;
-
     //The backtracking stack is used so the robot can go back through the path they followed in case they reach a dead end.
     Stack backtrackingStack = stack_create();
 
@@ -61,11 +54,30 @@ void no_sensor_solver(MazeInfo mi) {
         Moves chosenMove;
 
         //If the robot is standing in a position then it has been visited.
-        mi->robot->knowledgeGrid[mi->robot->position.y][mi->robot->position.x] = K_VISITED;
+        set_position_knowledge(mi, mi->robot->position, K_VISITED);
+
+        for (size_t y = 0; y < mi->robot->knownHeight; y++) {
+            for (size_t x = 0; x < mi->robot->knownWidth; x++)
+                if (x == mi->robot->position.x && y == mi->robot->position.y)
+                    fprintf(stderr, "@");
+                else if (mi->robot->knowledgeGrid[y][x] == K_UNKNOWN)
+                    fprintf(stderr, "U");
+                else if (mi->robot->knowledgeGrid[y][x] == K_EMPTY)
+                    fprintf(stderr, ".");
+                else if (mi->robot->knowledgeGrid[y][x] == K_WALL)
+                    fprintf(stderr, "#");
+                else
+                    fprintf(stderr, "V");
+
+            fprintf(stderr, "\n");
+        }
+
+        fprintf(stderr, "\n\n");
+        getchar();
 
         //If no valid moves where found we use the stack to go back to the previous position.
         if (!choose_move(mi, &chosenMove)) {
-            //puts("Backtrack");
+            puts("Backtrack");
             //Get the previous move from the stack.
             Moves *previousMove = malloc(sizeof(Moves));
             previousMove = stack_pop(&backtrackingStack, (DestroyFunction)move_destroy, (CopyFunction)move_copy);
@@ -85,11 +97,11 @@ void no_sensor_solver(MazeInfo mi) {
         else {
             //Perform the move to the position given by the move function, then check if it's valid. Note the use of "_Point", since "Point"
             //is a pointer and would require memory allocation.
-            Point newPosition = create_point(mi->robot->position.x, mi->robot->position.y);
+            Point newPosition = point_create(mi->robot->position.x, mi->robot->position.y);
             point_move(&newPosition, chosenMove);
 
             //If we moved into a valid position update the robot's position and add the move to the stack.
-            if (valid_position(mi->maze, newPosition)) {
+            if (valid_position(mi, newPosition)) {
                 //If the position is valid print it.
                 print_move(chosenMove);
 
@@ -100,7 +112,7 @@ void no_sensor_solver(MazeInfo mi) {
             }
             //If we moved into a wall mark it as such and don't move the robot.
             else
-                mi->robot->knowledgeGrid[newPosition.y][newPosition.x] = K_WALL;
+                set_position_knowledge(mi, mi->robot->position, K_WALL);
         }
     }
 }

@@ -117,6 +117,11 @@ int main(int argc, char const *argv[])
     MazeInfo mi = generate_file(mazeFile);
     fclose(mazeFile);
 
+    size_t largestWidth = (mi->end.x > mi->start.x) ? mi->end.x : mi->start.x;
+    size_t largestHeight = (mi->end.y > mi->start.y) ? mi->end.y : mi->start.y;
+
+    initialize_robot(mi, largestWidth, largestHeight);
+
     //Seed the random number generator.
     srand(time(NULL));
 

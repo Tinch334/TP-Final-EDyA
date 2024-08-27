@@ -1,6 +1,7 @@
 #ifndef __MAZE_H__
 #define __MAZE_H__
 #include <stdlib.h>
+#include "utils/int_array.h"
 
 //Has all the possible states for a cell in the maze.
 typedef enum {
@@ -41,6 +42,8 @@ typedef _Maze *Maze;
 //A simple structure representing the robot, has it's position and sensor range.
 typedef struct {
     Point position;
+    size_t knownWidth;
+    size_t knownHeight;
     MazeKnowledge **knowledgeGrid;
 } _Robot;
 typedef _Robot *Robot;
@@ -61,13 +64,19 @@ MazeInfo mazeinfo_create();
 void mazeinfo_destroy(MazeInfo mi);
 
 //Initializes the robot structure.
-void initialize_robot(MazeInfo mi);
+void initialize_robot(MazeInfo mi, size_t initialWidth, size_t initialHeight);
+
+//Sets the specified point in the robots knowledge grid, resizing it if necessary.
+void set_position_knowledge(MazeInfo mi, Point p, unsigned int value);
+
+//Returns 1 if it's possible to move to the specified position, meaning it's unknown or not in the known grid.
+int get_position_knowledge(MazeInfo mi, Point p);
 
 //Returns 1 if the given position is empty in the given maze.
-int valid_position(const Maze m, const Point p);
+int valid_position(const MazeInfo mi, const Point p);
 
 //Creates and returns a point with the given coordinates.
-Point create_point(int x, int y);
+Point point_create(int x, int y);
 
 //Returns 1 if the given points have the same X and Y coordinates.
 int point_equal(const Point p1, const Point p2);

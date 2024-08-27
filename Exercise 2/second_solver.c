@@ -43,8 +43,12 @@ static int has_path(MazeInfo mi, Point p) {
     int hasPath = 0;
     Point checkDirections[4] = {point_create(0, -1), point_create(0, 1), point_create(-1, 0), point_create(1, 0)};
 
+    if (point_equal(p, mi->end))
+        return 1;
+
     for (size_t i = 0; i < 4; i++) {
         Point newPosition = point_create(p.x + checkDirections[i].x, p.y + checkDirections[i].y);
+        //fprintf(stderr, "New pos inside - X: %d - Y: %d\n", newPosition.x, newPosition.y);
 
         if (in_bounds(mi, newPosition))
             if (mi->robot->knowledgeGrid[newPosition.y][newPosition.x].knowledge == K_EMPTY || 
@@ -80,6 +84,7 @@ static Moves update_cell_get_move(MazeInfo mi, int sensorResult[4]) {
                 mi->robot->knowledgeGrid[newPosition.y][newPosition.x].knowledge = K_WALL;
             }
             else {
+                fprintf(stderr, "Checking\n");
                 /*
                 //Check if we haven't already visited the cell.
                 if (!(mi->robot->knowledgeGrid[newPosition.y][newPosition.x].knowledge == K_VISITED)) {
@@ -93,24 +98,26 @@ static Moves update_cell_get_move(MazeInfo mi, int sensorResult[4]) {
                 //Check if we haven't already visited the cell.
                 if (!(mi->robot->knowledgeGrid[newPosition.y][newPosition.x].knowledge == K_VISITED))
                     mi->robot->knowledgeGrid[newPosition.y][newPosition.x].knowledge = K_EMPTY;
+
+                if (has_path(mi, newPosition)) {
+                    fprintf(stderr, "Has path\n");
+                    mi->robot->knowledgeGrid[newPosition.y][newPosition.x].h = get_heuristic(newPosition, mi->end);
+                }
+                else {
+                    mi->robot->knowledgeGrid[newPosition.y][newPosition.x].h = inf(mi);
+                }
+
+                size_t newCost = mi->robot->knowledgeGrid[newPosition.y][newPosition.x].h + mi->robot->knowledgeGrid[newPosition.y][newPosition.x].g;
+
+                fprintf(stderr, "New cost: %d\n", newCost);
+
+                //If the new cost is better we update it. If the new and current best cost are the same the decision is made randomly.
+                if (newCost < lowestCost || (newCost == lowestCost && rand_range(1, 10) > 5)) {
+                    lowestCost = newCost;
+                    lowestCostIndex = i;
+                }
             }
 
-            if (has_path(mi, newPosition)) {
-                fprintf(stderr, "Has path\n");
-                mi->robot->knowledgeGrid[newPosition.y][newPosition.x].h = get_heuristic(newPosition, mi->end);
-            }
-            else
-                mi->robot->knowledgeGrid[newPosition.y][newPosition.x].h = inf(mi);
-
-            size_t newCost = mi->robot->knowledgeGrid[newPosition.y][newPosition.x].h + mi->robot->knowledgeGrid[newPosition.y][newPosition.x].g;
-
-            fprintf(stderr, "New cost: %d\n", newCost);
-
-            //If the new cost is better we update it. If the new and current best cost are the same the decision is made randomly.
-            if (newCost < lowestCost || (newCost == lowestCost && rand_range(1, 10) > 5)) {
-                lowestCost = newCost;
-                lowestCostIndex = i;
-            }
         }
     }
 
@@ -123,12 +130,13 @@ static Moves update_cell_get_move(MazeInfo mi, int sensorResult[4]) {
 }
 
 void sensor_solver(MazeInfo mi) {
-    //CString pathString = cstring_create(5);
+    CString pathString = cstring_create(5);
     int sensorResult[4];
 
     fprintf(stderr, "Dimensions: X: %d - Y: %d\n", mi->robot->mazeSizeX, mi->robot->mazeSizeY);
 
-    while(!point_equal(mi->robot->position, mi->end)) {
+    int cont = 0;
+    while(!point_equal(mi->robot->position, mi->end) && cont++ < 35) {
         fprintf(stderr, "\n------------------------\n");
         //Use the sensor to scan the robot's surroundings.
         printf("? %d %d\n", mi->robot->position.y, mi->robot->position.x);
@@ -153,12 +161,13 @@ void sensor_solver(MazeInfo mi) {
 
         Moves chosenMove = update_cell_get_move(mi, sensorResult);
         char moveChar = point_move(&(mi->robot->position), chosenMove);
-        //cstring_add_char(pathString, moveChar);
+        cstring_add_char(pathString, moveChar);
         mi->robot->knowledgeGrid[mi->robot->position.y][mi->robot->position.x].knowledge = K_VISITED;
         fflush(stderr);
+        fprintf(stderr, "Pasos: %d\n", cont);
     }
-
-    printf("! L\n");
+    printf("! %s\n", pathString->string);
+    fflush(stderr);
 
     //cstring_destroy(pathString);
 }
