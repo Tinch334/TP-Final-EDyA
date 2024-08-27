@@ -3,6 +3,6 @@
 #include "maze.h"
 #include <stdlib.h>
 
-char *sensor_solver(Robot r);
+void sensor_solver(MazeInfo mi);
 
 #endif /* __FIRST_SOLVER_H__ */

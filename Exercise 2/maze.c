@@ -1,70 +1,72 @@
 #include "maze.h"
-#include "priority_queue/priority_queue.h"
 #include <stdlib.h>
 #include <assert.h>
 
-PositionBH pbh_create(Point p, int k1, int k2) {
-    PositionBH pbh = malloc(sizeof(_PositionBH));
-    assert(ppq != NULL);
 
-    pbh->position.x = p.x;
-    pbh->position.y = p.y;
+MazeInfo mazeinfo_create(Point start, Point end, size_t sizeX, size_t sizeY) {
+    MazeInfo mi = malloc(sizeof(_MazeInfo));
+    assert(mi != NULL);
+    mi->start.x = start.x;
+    mi->start.y = start.y;
+    mi->end.x = end.x;
+    mi->end.y = end.y;
 
-    pbh->k1 = k1;
-    pbh->k2 = k2;
+    mi->robot = malloc(sizeof(_Robot));
+    assert(mi->robot != NULL);
 
-    return pbh;
+    initialize_robot(mi, sizeX, sizeY);
+
+    return mi;
 }
 
-void pbh_destroy(PositionBH pbh) {
-    free(pbh);
+void mazeinfo_destroy(MazeInfo mi) {
+    for (size_t y = 0; y < mi->robot->mazeSizeY; y++)
+        free(mi->robot->knowledgeGrid[y]);
+    free(mi->robot->knowledgeGrid);
+    free(mi->robot);
+
+    free(mi);
 }
 
-int pbh_compare(PositionBH pbh_1, PositionBH pbh_2) {
-    if(pbh_1->k1 < pbh_2->k1)
-        return 1;
-    else if(pbh_1->k1 == pbh_2->k1 && pbh_1->k2 <= pbh_2->k2)
-        return 0;
+void initialize_robot(MazeInfo mi, size_t sizeX, size_t sizeY) {
+    //The robots initial position is the starting position.
+    mi->robot->position.y = mi->start.y;
+    mi->robot->position.x = mi->start.x;
 
-    return -1;
+    mi->robot->mazeSizeX = sizeX;
+    mi->robot->mazeSizeY = sizeY;
+
+    //We create the robots "knowledge gird", used to mark the information the robot has about each cell.
+    mi->robot->knowledgeGrid = malloc(mi->robot->mazeSizeY * sizeof(MazeCell*));
+    assert(mi->robot->knowledgeGrid != NULL);
+
+    for (size_t y = 0; y < mi->robot->mazeSizeY; y++) {
+        mi->robot->knowledgeGrid[y] = malloc(mi->robot->mazeSizeX * sizeof(MazeCell));
+        assert(mi->robot->knowledgeGrid[y] != NULL);
+
+        for (size_t x = 0; x < mi->robot->mazeSizeX; x++) {
+            mi->robot->knowledgeGrid[y][x].knowledge = K_UNKNOWN;
+            mi->robot->knowledgeGrid[y][x].g = inf(mi);
+            mi->robot->knowledgeGrid[y][x].h = inf(mi);
+        }
+    }
+
+    //We know the end is empty.
+    mi->robot->knowledgeGrid[mi->end.y][mi->end.x].knowledge = K_EMPTY;
+    mi->robot->knowledgeGrid[mi->end.y][mi->end.x].h = 0;
+    //The cost of the start is zero.
+    mi->robot->knowledgeGrid[mi->start.y][mi->start.x].knowledge = K_EMPTY;
+    mi->robot->knowledgeGrid[mi->start.y][mi->start.x].h = 0;
+    mi->robot->knowledgeGrid[mi->start.y][mi->start.x].g = 0;
 }
 
-//Creates and returns a new robot structure.
-Robot robot_create() {
-    //Assign all the necessary memory and check that it was actually assigned.
-    Robot r = malloc(sizeof(_Robot));
-    assert(r != NULL);
-
-    r->pq = bheap_create((CompareFunction)pbh_compare, (CopyFunction)pbh_create, (DestroyFunction)pbh_destroy);
-    assert(r->pq != NULL);
-
-    r->maze = malloc(sizeof(_Maze));
-    assert(r->maze != NULL);
-    r->maze->sizeY = 0;
-    r->maze->sizeX = 0;
-    r->maze->maze = NULL;
-
-    r->start.x = 0;
-    r->start.y = 0;
-    r->end.x = 0;
-    r->end.y = 0;
-    r->position.x = 0;
-    r->position.y = 0;
-
-    return r;
+int inf(MazeInfo mi) {
+    return mi->robot->mazeSizeX * mi->robot->mazeSizeY + 1;
 }
 
-//Destroys the given robot structure.
-void robot_destroy(Robot r) {
-    //Destroy the priority queue.
-    pq_destroy(r->pq);
-
-    //Since "maze" is a double pointer we first free all the memory pointed to by the second pointer.
-    for (size_t y = 0; y < r->maze->sizeY; y++)
-        free(r->maze->maze[y]);
-    free(r->maze);
-
-    free(r);
+Point point_create(int x, int y) {
+    Point p = {.x = x, .y = y};
+    return p;
 }
 
 int point_equal(const Point p1, const Point p2) {

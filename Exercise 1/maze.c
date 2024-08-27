@@ -32,7 +32,18 @@ MazeInfo mazeinfo_create() {
 }
 
 void mazeinfo_destroy(MazeInfo mi) {
+    //Since "maze" is a double pointer we first free all the memory pointed to by the second pointer.
+    for (size_t y = 0; y < mi->maze->sizeY; y++)
+        free(mi->maze->maze[y]);
+    free(mi->maze->maze);
+    free(mi->maze);
 
+    for (size_t y = 0; y < mi->maze->sizeY; y++)
+        free(mi->robot->knowledgeGrid[y]);
+    free(mi->robot->knowledgeGrid);
+    free(mi->robot);
+
+    free(mi);
 }
 
 void initialize_robot(MazeInfo mi) {

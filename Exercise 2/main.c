@@ -11,27 +11,18 @@ int main(int argc, char const *argv[])
     int startX, startY, endX, endY, sizeX, sizeY, sensorRange;
 
     //Read all the information from "sensor.c".
-    scanf("%d%d%d", &sizeX, &sizeY, &sensorRange);
-    scanf("%d%d", &startX, &startY);
-    scanf("%d%d", &endX, &endY);
+    scanf("%d%d%d", &sizeY, &sizeX, &sensorRange);
+    scanf("%d%d", &startY, &startX);
+    scanf("%d%d", &endY, &endX);
 
     //Seed the random number generator.
     srand(time(NULL));
 
-    Robot r = robot_create();
-    r->start.x = startX;
-    r->start.y = startY;
-    r->end.x = endX;
-    r->end.y = endY;
-    r->maze->sizeX = sizeX;
-    r->maze->sizeY = sizeY;
-    r->sensorRange = sensorRange;
+    MazeInfo mi = mazeinfo_create(point_create(startX, startY), point_create(endX, endY), sizeX, sizeY);
 
-    sensor_solver(r);
-
-    robot_destroy(r);
-
-    printf("! L\n");
+    sensor_solver(mi);
+    
+    mazeinfo_destroy(mi);
 
     return 0;
 }

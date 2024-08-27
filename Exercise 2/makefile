@@ -1,13 +1,13 @@
-OBJS	= main.o second_solver.o maze.o priority_queue/heap.o
-SOURCE	= main.c second_solver.c maze.c priority_queue/heap.c
-HEADER	= second_solver.h maze.h priority_queue/heap.h
+OBJS	= main.o second_solver.o maze.o utils/custom_string.o
+SOURCE	= main.c second_solver.c maze.c utils/custom_string.c
+HEADER	= second_solver.h maze.h utils/custom_string.h
 OUT	= out
 CC	 = gcc
 FLAGS	 = -g -c -Wall
 LFLAGS	 = 
 
 all: $(OBJS)
-	$(CC) -g $(OBJS) -o $(OUT) $(LFLAGS)
+	$(CC) -g $(OBJS) -lm -o $(OUT) $(LFLAGS)
 
 main.o: main.c
 	$(CC) $(FLAGS) main.c
@@ -18,8 +18,8 @@ second_solver.o: second_solver.c
 maze.o: maze.c
 	$(CC) $(FLAGS) maze.c
 
-priority_queue/heap.o: priority_queue/heap.c
-	$(CC) $(FLAGS) -o priority_queue/heap.o priority_queue/heap.c 
+utils/custom_string.o: utils/custom_string.c
+	$(CC) $(FLAGS) -o utils/custom_string.o utils/custom_string.c 
 
 
 clean:

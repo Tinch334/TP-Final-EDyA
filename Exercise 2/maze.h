@@ -1,6 +1,5 @@
 #ifndef __MAZE_H__
 #define __MAZE_H__
-#include "priority_queue/bheap.h"
 #include <stdlib.h>
 
 typedef enum {
@@ -22,59 +21,56 @@ typedef enum {
     K_WALL,
     K_VISITED,
     K_UNKNOWN
-} MazeKnowledge;
+} CellKnowledge;
 
 //To use the algorithm we need to store additional information about the cells.
 typedef struct {
     int g;
-    int rhs;
-    MazeKnowledge knowledge;
+    int h;
+    CellKnowledge knowledge;
 } MazeCell;
 
 //The maze structure, we use a double pointer to be able to define a 2D array of unspecified dimensions, this method requires more setup than
 //using a linear array as 2D, but simplifies accessing the array.
 typedef struct {
-    size_t sizeY;
-    size_t sizeX;
-    MazeCell **maze;
-} _Maze;
-typedef _Maze *Maze;
+    
+} MazeKnowledge;
 
-//A structure representing the robot and the knowledge it has.
+//A structure representing the robot and the knowledge it has. We use a double pointer to be able to define a 2D array of unspecified dimensions
+//this method requires more setup than using a linear array as 2D, but simplifies accessing the array.
 typedef struct {
-    BHeap bh;
-    Maze maze;
-    Point start;
-    Point end;
+    size_t mazeSizeX;
+    size_t mazeSizeY;
+    MazeCell **knowledgeGrid;
     Point position;
     size_t sensorRange;
 } _Robot;
 typedef _Robot *Robot;
 
-//The structure used to store cells in the priority queue.
+//Contains all necessary information to solve the maze.
 typedef struct {
-    Point position;
-    int k1;
-    int k2;
-} _PositionBH;
-typedef _PositionBH *PositionBH;
+    Robot robot;
+    Point start;
+    Point end;
+} _MazeInfo;
+typedef _MazeInfo *MazeInfo;
 
-//Creates a "PositionBH" structure with the given values.
-PositionBH pbh_create(Point p, int k1, int k2);
+//Creates a MazeInfo structure, with the values set appropriately.
+MazeInfo mazeinfo_create(Point start, Point end, size_t sizeX, size_t sizeY);
 
-//Destroys the given "PositionBH" structure.
-void pbh_destroy(PositionBH pbh);
+//Destroys the given MazeInfo structure.
+void mazeinfo_destroy(MazeInfo mi);
 
-//Compares two "PositionBH" structures, returns an integer according to the result.
-int pbh_compare(PositionBH pbh_1, PositionBH pbh_2);
+//Initializes the robot structure.
+void initialize_robot(MazeInfo mi, size_t sizeX, size_t sizeY);
 
-//Creates a robot structure, with the values set appropriately.
-Robot robot_create();
-
-//Destroys the given robot structure.
-void robot_destroy(Robot r);
+//Creates and returns a point with the given coordinates.
+Point point_create(int x, int y);
 
 //Returns 1 if the given points have the same X and Y coordinates.
 int point_equal(const Point p1, const Point p2);
+
+//Returns an impossibly large value for the g and h costs of a cell.
+int inf(MazeInfo mi);
 
 #endif /* __MAZE_H_ */

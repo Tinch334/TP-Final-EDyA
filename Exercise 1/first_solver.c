@@ -13,7 +13,7 @@ static int rand_range(const int min, const int max) {
     return rand() % (max - min + 1) + min;
 }
 
-//Gets the euclidean distance between the specified points.
+//Gets the distance between the specified points.
 static size_t get_distance(Point p1, Point p2) {
     return pow(abs(p1.x - p2.x), 2) + pow(abs(p1.y - p2.y), 2);
 }
@@ -34,7 +34,7 @@ static int choose_move(const MazeInfo mi, Moves *chosenMove) {
         if (newPosition.x >= 0 && newPosition.x < mi->maze->sizeX && newPosition.y >= 0 && newPosition.y < mi->maze->sizeY) {
             if (mi->robot->knowledgeGrid[newPosition.y][newPosition.x] == K_UNKNOWN) {
                 size_t newDistance = get_distance(newPosition, mi->end);
-                //If the new distance is better we update it. In the case of the new and current distance being equal the decision is made randomly.
+                //If the new distance is better we update it. If the new and current best distance are the same the decision is made randomly.
                 if (newDistance < bestDistance || (newDistance == bestDistance && rand_range(1, 10) > 5)) {
                     setDirection = 1;
 
