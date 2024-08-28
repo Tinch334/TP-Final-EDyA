@@ -14,9 +14,10 @@ static int rand_range(const int min, const int max) {
     return rand() % (max - min + 1) + min;
 }
 
-//Gets the distance between the specified points.
+//Gets the euclidean distance between the specified points. This was determined to be the best distance to use after testing, utilizing
+//5000 random mazes per distance equation.
 static size_t get_distance(Point p1, Point p2) {
-    return (size_t)pow(abs(p1.x - p2.x), 2) + pow(abs(p1.y - p2.y), 2);
+    return (size_t)sqrt((int)pow(abs(p1.x - p2.x), 2) + (int)pow(abs(p1.y - p2.y), 2));
 }
 
 //Chooses what move to make based on the current knowledge an information of the maze. The move to be made will be stored in "chosenMove", if 
@@ -31,7 +32,7 @@ static int choose_move(const MazeInfo mi, Moves *chosenMove) {
 
     for (size_t i = 0; i < 4; i++) {
         Point newPosition = point_create(mi->robot->position.x + checkDirections[i].x, mi->robot->position.y + checkDirections[i].y);
-        if (!get_position(mi, &newPosition)) {
+        if (!get_position(mi, &newPosition) && newPosition.x >= 0 && newPosition.y >= 0) {
             size_t newDistance = get_distance(newPosition, mi->end);
             //If the new distance is better we update it. If the new and current best distance are the same the decision is made randomly.
             if (newDistance < bestDistance || (newDistance == bestDistance && rand_range(1, 10) > 5)) {

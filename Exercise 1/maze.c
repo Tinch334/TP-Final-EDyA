@@ -74,6 +74,9 @@ void mazeinfo_destroy(MazeInfo mi) {
 }
 
 void initialize_robot(MazeInfo mi, size_t initialWidth, size_t initialHeight) {
+    mi->robot->position.x = mi->start.x;
+    mi->robot->position.y = mi->start.y;
+
     //We want the size of the hash table to be high to keep the load factor low.
     size_t htable_size = 100 < initialWidth * initialHeight ? initialWidth * initialHeight : 100;
 
