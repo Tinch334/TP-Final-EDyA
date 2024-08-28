@@ -21,18 +21,14 @@ CString cstring_create(size_t initialSize) {
 void cstring_add_char(CString cstring, char c) {
     (cstring->size)++;
 
+    //Check if we've run out of space.
     if (cstring->ptr - 1 >= cstring->size) {
-        fprintf(stderr, "Realloc");
-        fflush(stderr);
-
         cstring->size = cstring->size * 2;
         cstring->string = realloc(cstring->string, sizeof(char) * cstring->size);
 
         assert(cstring->string != NULL);
     }
 
-    fprintf(stderr, "Ptr: %ld\n", cstring->ptr);
-    fflush(stderr);
     cstring->string[cstring->ptr] = c;
     (cstring->ptr)++;
     cstring->string[cstring->ptr] = '\0';

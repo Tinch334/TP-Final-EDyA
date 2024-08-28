@@ -1,21 +1,13 @@
 #ifndef __MAZE_H__
 #define __MAZE_H__
 #include <stdlib.h>
-#include "utils/int_array.h"
+#include "utils/hash_table.h"
 
 //Has all the possible states for a cell in the maze.
 typedef enum {
     EMPTY,
     WALL
 } MazeStates;
-
-//All the possible "knowledge" states for a cell in the knowledge matrix.
-typedef enum {
-    K_EMPTY,
-    K_WALL,
-    K_VISITED,
-    K_UNKNOWN
-} MazeKnowledge;
 
 typedef enum {
     MOVE_L,
@@ -42,9 +34,8 @@ typedef _Maze *Maze;
 //A simple structure representing the robot, has it's position and sensor range.
 typedef struct {
     Point position;
-    size_t knownWidth;
-    size_t knownHeight;
-    MazeKnowledge **knowledgeGrid;
+    //The robot uses a hash table to store the positions it has already visited as well as obstacles.
+    HashTable knowledgeTable;
 } _Robot;
 typedef _Robot *Robot;
 
@@ -66,11 +57,11 @@ void mazeinfo_destroy(MazeInfo mi);
 //Initializes the robot structure.
 void initialize_robot(MazeInfo mi, size_t initialWidth, size_t initialHeight);
 
-//Sets the specified point in the robots knowledge grid, resizing it if necessary.
-void set_position_knowledge(MazeInfo mi, Point p, unsigned int value);
+//Marks the specified point in the robot's knowledge table.
+void mark_position(MazeInfo mi, Point *p);
 
-//Returns 1 if it's possible to move to the specified position, meaning it's unknown or not in the known grid.
-int get_position_knowledge(MazeInfo mi, Point p);
+//Returns 1 if the specified position is in the robot's knowledge table.
+int get_position(MazeInfo mi, Point *p);
 
 //Returns 1 if the given position is empty in the given maze.
 int valid_position(const MazeInfo mi, const Point p);

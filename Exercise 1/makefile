@@ -1,6 +1,6 @@
-OBJS = main.o maze.o first_solver.o utils/glist.o utils/stack.o utils/int_array.o
-SOURCE = main.c maze.c first_solver.c utils/glist.c utils/stack.c utils/int_array.c
-HEADER = maze.h first_solver.h utils/glist.h utils/stack.h utils/int_array.h
+OBJS = main.o maze.o first_solver.o utils/glist.o utils/stack.o utils/hash_table.o
+SOURCE = main.c maze.c first_solver.c utils/glist.c utils/stack.c utils/hash_table.c
+HEADER = maze.h first_solver.h utils/glist.h utils/stack.h utils/hash_table.h
 OUT	= out
 CC = gcc
 FLAGS = -lm -g -c -Wextra -pedantic -Wconversion -Wall
@@ -24,8 +24,8 @@ utils/glist.o: utils/glist.c
 utils/stack.o: utils/stack.c
 	$(CC) $(FLAGS) -o utils/stack.o utils/stack.c
 
-utils/int_array.o: utils/int_array.c
-	$(CC) $(FLAGS) -o utils/int_array.o utils/int_array.c
+utils/hash_table.o: utils/hash_table.c
+	$(CC) $(FLAGS) -o utils/hash_table.o utils/hash_table.c
 
 
 clean:

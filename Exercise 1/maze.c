@@ -1,8 +1,37 @@
 #include "maze.h"
+#include "utils/hash_table.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
 
+
+//The functions hash the points using a basic hashing algorithm, the constants where chosen so that points could have values of up to
+//1000 in each component.
+static int hash_int(int key)
+{
+    return ((11 * key) % 75);
+}
+
+static int hash_point(Point *p) {
+    return (53 + hash_int(p->x)) * 53 + hash_int(p->y);
+}
+
+//The following three functions are used to handle the points in the hash table.
+static Point *p_point_copy(Point *p) {
+    Point *newP = malloc(sizeof(Point));
+    newP->x = p->x;
+    newP->y = p->y;
+
+    return newP;
+}
+
+static int p_point_equal(Point *p1, Point *p2) {
+    return abs(p1->y - p2->y) + abs(p1->x - p2->x);
+}
+
+static void p_point_destroy(Point *p1) {
+    free(p1);
+}
 
 MazeInfo mazeinfo_create() {
     //Assign all the necessary memory and check that it was actually assigned.
@@ -26,7 +55,7 @@ MazeInfo mazeinfo_create() {
 
     mi->robot->position.x = 0;
     mi->robot->position.y = 0;
-    mi->robot->knowledgeGrid = NULL;
+    mi->robot->knowledgeTable = NULL;
 
     return mi;
 }
@@ -38,78 +67,25 @@ void mazeinfo_destroy(MazeInfo mi) {
     free(mi->maze->maze);
     free(mi->maze);
 
-    for (size_t y = 0; y < mi->robot->knownHeight; y++)
-        free(mi->robot->knowledgeGrid[y]);
-    free(mi->robot->knowledgeGrid);
-    free(mi->robot);
+    //Destroy the robot's hash table.
+    htable_destroy(mi->robot->knowledgeTable);
 
     free(mi);
 }
 
 void initialize_robot(MazeInfo mi, size_t initialWidth, size_t initialHeight) {
-    //The robots initial position is the starting position.
-    mi->robot->position.y = mi->start.y;
-    mi->robot->position.x = mi->start.x;
+    //We want the size of the hash table to be high to keep the load factor low.
+    size_t htable_size = 100 < initialWidth * initialHeight ? initialWidth * initialHeight : 100;
 
-    //We add one because the position themselves are in the maze.
-    mi->robot->knownWidth = initialWidth + 1;
-    mi->robot->knownHeight = initialHeight + 1;
-
-    //We create the robots "knowledge gird", used to mark the information the robot has about each cell.
-    mi->robot->knowledgeGrid = malloc(mi->robot->knownHeight * sizeof(unsigned int*));
-    assert(mi->robot->knowledgeGrid != NULL);
-
-    for (size_t y = 0; y < mi->robot->knownHeight; y++) {
-        mi->robot->knowledgeGrid[y] = malloc(mi->robot->knownWidth * sizeof(unsigned int));
-        assert(mi->robot->knowledgeGrid[y] != NULL);
-
-        for (size_t x = 0; x < mi->robot->knownWidth; x++)
-            mi->robot->knowledgeGrid[y][x] = K_UNKNOWN;
-    }
-
-    mi->robot->knowledgeGrid[mi->end.y][mi->end.x] = K_EMPTY;
+    mi->robot->knowledgeTable = htable_create(htable_size, (CopyFunctionHash)p_point_copy, (CompareFunctionHash)p_point_equal, (DestroyFunctionHash)p_point_destroy, (HashFunction)hash_point);
 }
 
-void set_position_knowledge(MazeInfo mi, Point p, unsigned int value) {
-    //Check if the grid is too small width wise, if so resize it.
-    if (p.x > mi->robot->knownWidth - 1) {
-        for (size_t y = 0; y < mi->robot->knownHeight; y++) {
-            mi->robot->knowledgeGrid[y] = realloc(mi->robot->knowledgeGrid[y], (p.x + 1) * sizeof(unsigned int));
-            assert(mi->robot->knowledgeGrid[y] != NULL);
-
-            for (size_t x = mi->robot->knownWidth - 1; x <= (size_t)p.x; x++)
-                mi->robot->knowledgeGrid[y][x] = K_UNKNOWN;
-        }
-
-        //Update dimensions.
-        mi->robot->knownWidth = p.x + 1;
-    }
-
-    //Check if the grid is too small height wise, if so resize it.
-    if (p.y > mi->robot->knownHeight - 1) {
-        mi->robot->knowledgeGrid = realloc(mi->robot->knowledgeGrid, (p.y + 1) * sizeof(unsigned int*));
-        assert(mi->robot->knowledgeGrid != NULL);
-
-        for (size_t y = mi->robot->knownHeight - 1; y <= (size_t)p.y; y++) {
-            mi->robot->knowledgeGrid[y] = malloc(mi->robot->knownWidth * sizeof(unsigned int));
-            assert(mi->robot->knowledgeGrid[y] != NULL);
-
-            for (size_t x = 0; x < mi->robot->knownWidth; x++)
-                mi->robot->knowledgeGrid[y][x] = K_UNKNOWN;
-        }
-
-        //Update dimensions.
-        mi->robot->knownHeight = p.y + 1;
-    }
-
-    mi->robot->knowledgeGrid[p.y][p.x] = value;
+void mark_position(MazeInfo mi, Point *p) {
+    htable_insert(mi->robot->knowledgeTable, p);
 }
 
-int get_position_knowledge(MazeInfo mi, Point p) {
-    if (p.x >= 0 && p.x < mi->robot->knownWidth && p.y >= 0 && p.y < mi->robot->knownHeight)
-        return mi->robot->knowledgeGrid[p.y][p.x] == K_UNKNOWN || mi->robot->knowledgeGrid[p.y][p.x] == K_EMPTY;
-
-    return 1;
+int get_position(MazeInfo mi, Point *p) {
+    return htable_contains(mi->robot->knowledgeTable, p);
 }
 
 int valid_position(const MazeInfo mi, const Point p) {

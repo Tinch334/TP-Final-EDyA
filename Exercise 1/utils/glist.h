@@ -4,6 +4,8 @@
 typedef void (*DestroyFunction)(void *data);
 typedef void *(*CopyFunction)(void *data);
 typedef void (*VisitorFunction)(void *data);
+//Returns a negative value if data1 < data2, 0 if they are equal and a positive value if data1 > data2.
+typedef int (*CompareFunction)(void *data1, void *data2);
 
 typedef struct _GNode {
     void *data;
@@ -35,5 +37,8 @@ void *glist_get_start(GList list, CopyFunction copyFunc);
 
 //Destroys the first element in the list.
 GList glist_delete_start(GList list, DestroyFunction destroyFunc);
+
+//Returns 1 if the given value is in the list, returns 0 otherwise.
+int glist_find(GList list, CompareFunction comp, void *data);
 
 #endif/* __GLIST_H__ */

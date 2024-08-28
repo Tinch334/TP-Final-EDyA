@@ -74,3 +74,13 @@ GList glist_delete_start(GList list, DestroyFunction destroyFunc) {
         return next;
     }
 }
+
+int glist_find(GList list, CompareFunction comp, void *data) {
+    int found = 0;
+
+    for (GNode *node = list; node != NULL; node = node->next)
+        if (comp(node->data, data) == 0)
+            found = 1;
+
+    return found;
+}
