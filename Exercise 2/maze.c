@@ -1,4 +1,5 @@
 #include "maze.h"
+#include "utils/stack.h"
 #include <stdlib.h>
 #include <assert.h>
 #include <limits.h>
@@ -53,6 +54,8 @@ void initialize_robot(MazeInfo mi, size_t sizeX, size_t sizeY) {
             mi->robot->knowledgeGrid[y][x].cost = INT_MAX;
         }
     }
+
+    mi->robot->pathStack = stack_create();
 
     //We know the end and start are empty.
     mi->robot->knowledgeGrid[mi->end.y][mi->end.x].knowledge = K_EMPTY;

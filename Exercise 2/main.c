@@ -1,6 +1,5 @@
 #include "maze.h"
 #include "second_solver.h"
-#include "utils/queue.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>

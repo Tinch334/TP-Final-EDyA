@@ -1,6 +1,6 @@
-OBJS	= main.o second_solver.o maze.o utils/custom_string.o utils/gdlist.o utils/queue.o
-SOURCE	= main.c second_solver.c maze.c utils/custom_string.c utils/gdlist.c utils/queue.c
-HEADER	= second_solver.h maze.h utils/custom_string.h utils/gdlist.h utils/queue.h
+OBJS	= main.o second_solver.o maze.o utils/custom_string.o utils/glist.o utils/stack.o
+SOURCE	= main.c second_solver.c maze.c utils/custom_string.c utils/glist.c utils/stack.c
+HEADER	= second_solver.h maze.h utils/custom_string.h utils/glist.h utils/stack.h
 OUT	= out
 CC	 = gcc
 FLAGS	 = -g -c -Wall
@@ -21,11 +21,11 @@ maze.o: maze.c
 utils/custom_string.o: utils/custom_string.c
 	$(CC) $(FLAGS) -o utils/custom_string.o utils/custom_string.c
 
-utils/gdlist.o: utils/gdlist.c
-	$(CC) $(FLAGS) -o utils/gdlist.o utils/gdlist.c
+utils/glist.o: utils/glist.c
+	$(CC) $(FLAGS) -o utils/glist.o utils/glist.c 
 
-utils/queue.o: utils/queue.c
-	$(CC) $(FLAGS) -o utils/queue.o utils/queue.c
+utils/stack.o: utils/stack.c
+	$(CC) $(FLAGS) -o utils/stack.o utils/stack.c
 
 
 clean:

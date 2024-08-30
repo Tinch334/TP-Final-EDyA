@@ -1,12 +1,14 @@
 #ifndef __MAZE_H__
 #define __MAZE_H__
+#include "utils/stack.h"
 #include <stdlib.h>
 
 typedef enum {
     MOVE_L,
     MOVE_R,
     MOVE_D,
-    MOVE_U
+    MOVE_U,
+    MOVE_N
 } Moves;
 
 //A generic 2D point structure.
@@ -19,7 +21,8 @@ typedef struct {
 typedef enum {
     K_EMPTY,
     K_WALL,
-    K_UNKNOWN
+    K_UNKNOWN,
+    K_VISITED
 } CellKnowledge;
 
 //To use the algorithm we need to store additional information about the cells.
@@ -35,6 +38,7 @@ typedef struct {
     size_t mazeSizeX;
     size_t mazeSizeY;
     MazeCell **knowledgeGrid;
+    Stack pathStack;
     Point position;
     size_t knownSensorRange;
 } _Robot;
