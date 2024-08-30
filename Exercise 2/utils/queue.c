@@ -1,6 +1,5 @@
 #include "queue.h"
 #include <stdlib.h>
-#include <stdio.h>
 
 
 Queue queue_create() {
@@ -24,7 +23,6 @@ void *queue_dequeue(Queue *q, DestroyFunction destroyFunc, CopyFunction copyFunc
         return NULL;
 
     void *value = gdlist_get_end(*q, copyFunc);
-    printf("Inner, got: %d\n", *((int *)value));
     *q = gdlist_delete_end(*q, destroyFunc);
 
     return value;

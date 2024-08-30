@@ -25,6 +25,7 @@ typedef enum {
 //To use the algorithm we need to store additional information about the cells.
 typedef struct {
     int cost;
+    int marked;
     CellKnowledge knowledge;
 } MazeCell;
 

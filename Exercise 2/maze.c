@@ -59,7 +59,6 @@ void initialize_robot(MazeInfo mi, size_t sizeX, size_t sizeY) {
     mi->robot->knowledgeGrid[mi->end.y][mi->end.x].cost = 0;
     
     mi->robot->knowledgeGrid[mi->start.y][mi->start.x].knowledge = K_EMPTY;
-    mi->robot->knowledgeGrid[mi->start.y][mi->start.x].cost = 0;
 }
 
 Point point_create(int x, int y) {

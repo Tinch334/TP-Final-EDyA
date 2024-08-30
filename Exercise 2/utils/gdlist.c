@@ -1,7 +1,6 @@
 #include "gdlist.h"
 #include <assert.h>
 #include <stdlib.h>
-#include <stdio.h>
 
 
 GDList gdlist_create() {
