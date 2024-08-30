@@ -19,22 +19,14 @@ typedef struct {
 typedef enum {
     K_EMPTY,
     K_WALL,
-    K_VISITED,
     K_UNKNOWN
 } CellKnowledge;
 
 //To use the algorithm we need to store additional information about the cells.
 typedef struct {
-    int g;
-    int h;
+    int cost;
     CellKnowledge knowledge;
 } MazeCell;
-
-//The maze structure, we use a double pointer to be able to define a 2D array of unspecified dimensions, this method requires more setup than
-//using a linear array as 2D, but simplifies accessing the array.
-typedef struct {
-    
-} MazeKnowledge;
 
 //A structure representing the robot and the knowledge it has. We use a double pointer to be able to define a 2D array of unspecified dimensions
 //this method requires more setup than using a linear array as 2D, but simplifies accessing the array.
@@ -43,7 +35,7 @@ typedef struct {
     size_t mazeSizeY;
     MazeCell **knowledgeGrid;
     Point position;
-    size_t sensorRange;
+    size_t knownSensorRange;
 } _Robot;
 typedef _Robot *Robot;
 
@@ -70,7 +62,7 @@ Point point_create(int x, int y);
 //Returns 1 if the given points have the same X and Y coordinates.
 int point_equal(const Point p1, const Point p2);
 
-//Returns an impossibly large value for the g and h costs of a cell.
-int inf(MazeInfo mi);
+//Moves the given point one unit in the given direction and returns the direction as a character.
+char point_move(Point *point, Moves move);
 
 #endif /* __MAZE_H_ */

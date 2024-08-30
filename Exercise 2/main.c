@@ -1,5 +1,6 @@
 #include "maze.h"
 #include "second_solver.h"
+#include "utils/queue.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -8,10 +9,10 @@
 
 int main(int argc, char const *argv[])
 {
-    int startX, startY, endX, endY, sizeX, sizeY, sensorRange;
+    int startX, startY, endX, endY, sizeX, sizeY;
 
-    //Read all the information from "sensor.c".
-    scanf("%d%d%d", &sizeY, &sizeX, &sensorRange);
+    //Read all the information from "sensor.c", note that we don't use the provided sensor range.
+    scanf("%d%d%*d", &sizeY, &sizeX);
     scanf("%d%d", &startY, &startX);
     scanf("%d%d", &endY, &endX);
 

@@ -1,9 +1,11 @@
 #include "second_solver.h"
-#include "utils/custom_string.h"
 #include "maze.h"
+#include "utils/queue.h"
+#include "utils/custom_string.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
+#include <limits.h>
 
 
 //Generates a random number between min and max. Note that the output is not perfectly distributed, however a more balanced version would
@@ -12,162 +14,222 @@ static int rand_range(const int min, const int max) {
     return rand() % (max - min + 1) + min;
 }
 
-//Moves the given point one unit in the given direction and returns the direction as a character.
-static char point_move(Point *point, Moves move) {
-    switch (move) {
-    case MOVE_L:
-        (point->x)--;
-        return 'L';
-    case MOVE_R:
-        (point->x)++;
-        return 'R';
-    case MOVE_U:
-        (point->y)--;
-        return 'U';
-    case MOVE_D:
-        (point->y)++;
-        return 'D';
-    }
-}
-
-//Returns 1 if the given point is inside the maze.
-static int in_bounds(MazeInfo mi, Point p) {
-    return p.x >= 0 && p.x < mi->robot->mazeSizeX && p.y >= 0 && p.y < mi->robot->mazeSizeY;
+//Clamps the given value between min and max.
+static clamp(int d, int min, int max) {
+  const int t = d < min ? min : d;
+  return t > max ? max : t;
 }
 
 static int get_heuristic(Point p1, Point p2) {
     return abs(p1.x - p2.x) + abs(p1.y - p2.y);
 }
 
-static int has_path(MazeInfo mi, Point p) {
-    int hasPath = 0;
-    Point checkDirections[4] = {point_create(0, -1), point_create(0, 1), point_create(-1, 0), point_create(1, 0)};
-
-    if (point_equal(p, mi->end))
-        return 1;
-
-    for (size_t i = 0; i < 4; i++) {
-        Point newPosition = point_create(p.x + checkDirections[i].x, p.y + checkDirections[i].y);
-        //fprintf(stderr, "New pos inside - X: %d - Y: %d\n", newPosition.x, newPosition.y);
-
-        if (in_bounds(mi, newPosition))
-            if (mi->robot->knowledgeGrid[newPosition.y][newPosition.x].knowledge == K_EMPTY || 
-                mi->robot->knowledgeGrid[newPosition.y][newPosition.x].knowledge == K_UNKNOWN)
-                hasPath++;
-    }
-
-    return hasPath;
+//Returns 1 if the given point is inside the maze and not a known wall.
+static int valid_position(MazeInfo mi, Point p) {
+    return p.x >= 0 && p.x < mi->robot->mazeSizeX && p.y >= 0 && p.y < mi->robot->mazeSizeY;
 }
 
-static Moves update_cell_get_move(MazeInfo mi, int sensorResult[4]) {
-    Point robotPos = mi->robot->position;
-    //Instead of checking each direction manually we check all of them using a loop.
+//Uses the sensor in the robot's current position, returns how many walls were detected.
+static int use_sensor(MazeInfo mi) {
+    int wall_count = 0;
+    int sensorResult[4];
+    //The checking order matches the order in which the sensor returns directions.
+    Point checkDirections[4] = {point_create(0, -1), point_create(0, 1), point_create(-1, 0), point_create(1, 0)};
+
+    //Call sensor and store results in the array.
+    printf("? %d %d\n", mi->robot->position.y, mi->robot->position.x);
+    fflush(stdout);
+    scanf("%d%d%d%d", &sensorResult[0], &sensorResult[1], &sensorResult[2], &sensorResult[3]);
+    //REMOVE
+    fprintf(stderr, "UP: %d - DOWN: %d - LEFT: %d - RIGHT: %d\n", sensorResult[0], sensorResult[1], sensorResult[2], sensorResult[3]);
+
+    //Estimate the sensors range, getting the largest reading minus 1.
+    for (size_t i = 0; i < 4; i++)
+        if (sensorResult[i] - 1 > mi->robot->knownSensorRange)
+            mi->robot->knownSensorRange = sensorResult[i] - 1;
+
+    //Use new sensor range to detect if there are walls.
+    for (size_t i = 0; i < 4; i++) {
+        //First mark all known empty spaces.
+        for (size_t cnt = 1; cnt < sensorResult[i]; cnt++) {
+            int yPos = mi->robot->position.y + checkDirections[i].y * cnt;
+            int xPos = mi->robot->position.x + checkDirections[i].x * cnt;
+            mi->robot->knowledgeGrid[yPos][xPos].knowledge = K_EMPTY;
+            fprintf(stderr, "Marked empty X: %d - Y:%d - Res: %d\n", xPos, yPos, mi->robot->knowledgeGrid[yPos][xPos].knowledge == K_EMPTY);
+        }
+
+        Point newPosition = point_create(mi->robot->position.x + checkDirections[i].x * sensorResult[i],
+                mi->robot->position.y + checkDirections[i].y * sensorResult[i]);
+        //If the last sensor position is in range and inside the maze we mark it as a wall.
+        if (valid_position(mi, newPosition))
+            if (sensorResult[i] <= mi->robot->knownSensorRange) {
+                mi->robot->knowledgeGrid[newPosition.y][newPosition.x].knowledge = K_WALL;
+                wall_count++;
+            }
+    }
+
+    return wall_count;
+}
+
+//This two functions are for use with the queue, they create and destroy a "*Point" structure.
+static Point *p_point_create(Point *p) {
+    Point *newPoint = malloc(sizeof(Point));
+    assert(newPoint != NULL);
+
+    newPoint->x = p->x;
+    newPoint->y = p->y;
+
+    return newPoint;
+}
+
+static void p_point_destroy(Point *p) {
+    free(p);
+}
+
+//Whenever a wall is detected we update all the costs with the new information.
+static void update_costs(MazeInfo mi) {
+    Point checkDirections[4] = {point_create(0, -1), point_create(0, 1), point_create(-1, 0), point_create(1, 0)};
+    Queue q = queue_create();
+    queue_enqueue(&q, (CopyFunction)p_point_create, &(mi->end));
+
+    fprintf(stderr, "Created queue\n");
+    fflush(stderr);
+    //Recalculate costs in the maze utilizing BFS.
+    while (!queue_empty(q)) {
+        Point *p = queue_dequeue(&q, (DestroyFunction)p_point_destroy, (CopyFunction)p_point_create);
+        fprintf(stderr, "P - X: %d - Y: %d - C: %d\n", p->x, p->y, mi->robot->knowledgeGrid[p->y][p->x].cost + 1);
+
+        for (size_t i = 0; i < 4; i++) {
+            Point newPosition = point_create(p->x + checkDirections[i].x, p->y + checkDirections[i].y);
+
+            //We check if the new point is valid and not a wall, if the new cost is lower than it's current cost we add it to queue, to
+            //be expanded.
+            if (valid_position(mi, newPosition) && mi->robot->knowledgeGrid[newPosition.y][newPosition.x].knowledge != K_WALL) {
+                //The cost of moving to a new cell is always 1.
+                size_t newCost =  mi->robot->knowledgeGrid[p->y][p->x].cost + 1;
+                fprintf(stderr, "NC: %ld, CC: %ld\n", newCost, mi->robot->knowledgeGrid[newPosition.y][newPosition.x].cost);
+                if (newCost < mi->robot->knowledgeGrid[newPosition.y][newPosition.x].cost) {
+                    mi->robot->knowledgeGrid[newPosition.y][newPosition.x].cost = newCost;
+                    queue_enqueue(&q, (CopyFunction)p_point_create, &newPosition);
+                }
+            }
+        }
+    }
+}
+
+//Gets the neighbour with lowest cost and returns the move to reach it.
+static Moves get_move(MazeInfo mi) {
     Point checkDirections[4] = {point_create(0, -1), point_create(0, 1), point_create(-1, 0), point_create(1, 0)};
     Moves moveDirections[4] = {MOVE_U, MOVE_D, MOVE_L, MOVE_R};
 
-    size_t lowestCost = inf(mi);
-    int lowestCostIndex = -1;
-    
+    size_t minCost = INT_MAX;
+    size_t minCostIndex;
+
+    //Get neighbour with lowest cost.
     for (size_t i = 0; i < 4; i++) {
-        Point newPosition = point_create(robotPos.x + checkDirections[i].x, robotPos.y + checkDirections[i].y);
+        Point newPosition = point_create(mi->robot->position.x + checkDirections[i].x, mi->robot->position.y + checkDirections[i].y);
+    
+        //Check that neighbour is valid.
+        if (valid_position(mi, newPosition)){
+            fprintf(stderr, "Valid new pos X: %d - Y: %d\n", newPosition.x, newPosition.y);
+            int neighbourCost = mi->robot->knowledgeGrid[newPosition.y][newPosition.x].cost;
 
-        //Ensure we are in bounds.
-        if (in_bounds(mi, newPosition)) {
-            fprintf(stderr, "New pos - X: %d - Y: %d\n", newPosition.x, newPosition.y);
-
-            //Update the g cost of the cell, in our case moving to a cell always costs the same.
-            mi->robot->knowledgeGrid[newPosition.y][newPosition.x].g = mi->robot->knowledgeGrid[robotPos.y][robotPos.x].g + 1;
-
-            //Check if there's a wall in that direction, if so moving to it never gets us to the exit.
-            if (sensorResult[i] == 1) {
-                mi->robot->knowledgeGrid[newPosition.y][newPosition.x].h = inf(mi);
-                mi->robot->knowledgeGrid[newPosition.y][newPosition.x].knowledge = K_WALL;
+            //If both costs are equal choose randomly.
+            if (neighbourCost < minCost || (neighbourCost == minCost && rand_range(1, 10) < 5)) {
+                minCost = neighbourCost;
+                minCostIndex = i;
             }
-            else {
-                fprintf(stderr, "Checking\n");
-                /*
-                //Check if we haven't already visited the cell.
-                if (!(mi->robot->knowledgeGrid[newPosition.y][newPosition.x].knowledge == K_VISITED)) {
-                    mi->robot->knowledgeGrid[newPosition.y][newPosition.x].knowledge = K_EMPTY;
-                    mi->robot->knowledgeGrid[newPosition.y][newPosition.x].h = get_heuristic(newPosition, mi->end);
-                }
-                else
-                    //If we already moved to the tile then we want to avoid doing it again if possible.
-                    mi->robot->knowledgeGrid[newPosition.y][newPosition.x].h = get_heuristic(newPosition, mi->end) + 1;
-                */
-                //Check if we haven't already visited the cell.
-                if (!(mi->robot->knowledgeGrid[newPosition.y][newPosition.x].knowledge == K_VISITED))
-                    mi->robot->knowledgeGrid[newPosition.y][newPosition.x].knowledge = K_EMPTY;
-
-                if (has_path(mi, newPosition)) {
-                    fprintf(stderr, "Has path\n");
-                    mi->robot->knowledgeGrid[newPosition.y][newPosition.x].h = get_heuristic(newPosition, mi->end);
-                }
-                else {
-                    mi->robot->knowledgeGrid[newPosition.y][newPosition.x].h = inf(mi);
-                }
-
-                size_t newCost = mi->robot->knowledgeGrid[newPosition.y][newPosition.x].h + mi->robot->knowledgeGrid[newPosition.y][newPosition.x].g;
-
-                fprintf(stderr, "New cost: %d\n", newCost);
-
-                //If the new cost is better we update it. If the new and current best cost are the same the decision is made randomly.
-                if (newCost < lowestCost || (newCost == lowestCost && rand_range(1, 10) > 5)) {
-                    lowestCost = newCost;
-                    lowestCostIndex = i;
-                }
-            }
-
         }
     }
 
-    if (mi->robot->knowledgeGrid[robotPos.y][robotPos.x].h < lowestCost)
-        mi->robot->knowledgeGrid[robotPos.y][robotPos.x].h = lowestCost;
+    fprintf(stderr, "Index %d\n", minCostIndex);
+    return moveDirections[minCostIndex];
+}
 
-    fprintf(stderr, "LIndex: %d\n", lowestCostIndex);
+static void debug_print_maze_info(MazeInfo mi) {
+    fprintf(stderr, "\n------------------------\n");
+        fprintf(stderr, "X: %d - Y: %d\n", mi->robot->position.x, mi->robot->position.y);
 
-    return moveDirections[lowestCostIndex];
+    for (size_t y = 0; y < mi->robot->mazeSizeY; y++) {
+        for (size_t x = 0; x < mi->robot->mazeSizeX; x++)
+            if (point_equal(mi->robot->position, point_create(x, y)))
+                fprintf(stderr, "@");
+            else if (mi->robot->knowledgeGrid[y][x].knowledge == K_WALL)
+                fprintf(stderr, "#");
+            else if (mi->robot->knowledgeGrid[y][x].knowledge == K_EMPTY)
+                fprintf(stderr, ".");
+            else
+                fprintf(stderr, "U");
+
+        fprintf(stderr, "\n");
+    }
+
+    fprintf(stderr, "\n");
+
+    for (size_t y = 0; y < mi->robot->mazeSizeY; y++) {
+        for (size_t x = 0; x < mi->robot->mazeSizeX; x++) {
+            int cost = mi->robot->knowledgeGrid[y][x].cost;
+            if (cost == INT_MAX)
+                fprintf(stderr, "I ");
+            else
+                fprintf(stderr, "%d ", mi->robot->knowledgeGrid[y][x].cost);
+        }
+
+        fprintf(stderr, "\n");
+    }
 }
 
 void sensor_solver(MazeInfo mi) {
-    CString pathString = cstring_create(5);
-    int sensorResult[4];
+    CString pathString = cstring_create(10);
 
-    fprintf(stderr, "Dimensions: X: %d - Y: %d\n", mi->robot->mazeSizeX, mi->robot->mazeSizeY);
+    fprintf(stderr, "Dimensions: X: %ld - Y: %ld\n", mi->robot->mazeSizeX, mi->robot->mazeSizeY);
 
     int cont = 0;
+
+    use_sensor(mi);
+    update_costs(mi);
+
     while(!point_equal(mi->robot->position, mi->end) && cont++ < 35) {
-        fprintf(stderr, "\n------------------------\n");
-        //Use the sensor to scan the robot's surroundings.
-        printf("? %d %d\n", mi->robot->position.y, mi->robot->position.x);
-        fflush(stdout);
-        scanf("%d%d%d%d", &sensorResult[0], &sensorResult[1], &sensorResult[2], &sensorResult[3]);
-        fprintf(stderr, "UP: %d - DOWN: %d - LEFT: %d - RIGHT: %d\n", sensorResult[0], sensorResult[1], sensorResult[2], sensorResult[3]);
-        fprintf(stderr, "X: %d - Y: %d\n", mi->robot->position.x, mi->robot->position.y);
+        debug_print_maze_info(mi);
 
-        for (size_t y = 0; y < mi->robot->mazeSizeY; y++) {
-            for (size_t x = 0; x < mi->robot->mazeSizeX; x++)
-                if (point_equal(mi->robot->position, point_create(x, y)))
-                    fprintf(stderr, "@");
-                else if (mi->robot->knowledgeGrid[y][x].knowledge == K_WALL)
-                    fprintf(stderr, "#");
-                else if (mi->robot->knowledgeGrid[y][x].knowledge == K_EMPTY || mi->robot->knowledgeGrid[y][x].knowledge == K_VISITED)
-                    fprintf(stderr, ".");
-                else
-                    fprintf(stderr, "U");
+        Moves chosenMove = get_move(mi);
+        fprintf(stderr, "Reached 1\n");
+        fflush(stderr);
+        Point newPosition = point_create(mi->robot->position.x, mi->robot->position.y);
+        fprintf(stderr, "Reached 2\n");
+        fflush(stderr);
+        fprintf(stderr, "New pos created X: %d - Y: %d\n", newPosition.x, newPosition.y);
+        char moveChar = point_move(&(newPosition), chosenMove);
+        fprintf(stderr, "Reached 3\n");
+        fflush(stderr);
 
-            fprintf(stderr, "\n");
+        fprintf(stderr, "Chosen pos X: %d - Y: %d\n", newPosition.x, newPosition.y);
+        //If the robot is going to move to an unknown location use the sensor.
+        if (mi->robot->knowledgeGrid[mi->robot->position.y][mi->robot->position.x].knowledge == K_UNKNOWN) {
+            //Walls were detected, recalculate costs.
+            if (use_sensor(mi) > 0) {
+                update_costs(mi);
+
+                chosenMove = get_move(mi);
+                fprintf(stderr, "Reached 1.2\n");
+                fflush(stderr);
+                newPosition = point_create(mi->robot->position.x, mi->robot->position.y);
+                fprintf(stderr, "Reached 2.2\n");
+                fflush(stderr);
+                moveChar = point_move(&(newPosition), chosenMove);
+                fprintf(stderr, "Reached 3.2\n");
+                fflush(stderr);
+            }
         }
 
-        Moves chosenMove = update_cell_get_move(mi, sensorResult);
-        char moveChar = point_move(&(mi->robot->position), chosenMove);
+        mi->robot->position = point_create(newPosition.x, newPosition.y);
         cstring_add_char(pathString, moveChar);
-        mi->robot->knowledgeGrid[mi->robot->position.y][mi->robot->position.x].knowledge = K_VISITED;
-        fflush(stderr);
+        mi->robot->knowledgeGrid[mi->robot->position.y][mi->robot->position.x].knowledge = K_EMPTY;
         fprintf(stderr, "Pasos: %d\n", cont);
+        fflush(stderr);
     }
     printf("! %s\n", pathString->string);
     fflush(stderr);
 
-    //cstring_destroy(pathString);
+    cstring_destroy(pathString);
 }

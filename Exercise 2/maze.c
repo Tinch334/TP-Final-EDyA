@@ -1,6 +1,7 @@
 #include "maze.h"
 #include <stdlib.h>
 #include <assert.h>
+#include <limits.h>
 
 
 MazeInfo mazeinfo_create(Point start, Point end, size_t sizeX, size_t sizeY) {
@@ -36,6 +37,9 @@ void initialize_robot(MazeInfo mi, size_t sizeX, size_t sizeY) {
     mi->robot->mazeSizeX = sizeX;
     mi->robot->mazeSizeY = sizeY;
 
+    //The sensor always has a range of at least 1.
+    mi->robot->knownSensorRange = 1;
+
     //We create the robots "knowledge gird", used to mark the information the robot has about each cell.
     mi->robot->knowledgeGrid = malloc(mi->robot->mazeSizeY * sizeof(MazeCell*));
     assert(mi->robot->knowledgeGrid != NULL);
@@ -46,22 +50,16 @@ void initialize_robot(MazeInfo mi, size_t sizeX, size_t sizeY) {
 
         for (size_t x = 0; x < mi->robot->mazeSizeX; x++) {
             mi->robot->knowledgeGrid[y][x].knowledge = K_UNKNOWN;
-            mi->robot->knowledgeGrid[y][x].g = inf(mi);
-            mi->robot->knowledgeGrid[y][x].h = inf(mi);
+            mi->robot->knowledgeGrid[y][x].cost = INT_MAX;
         }
     }
 
-    //We know the end is empty.
+    //We know the end and start are empty.
     mi->robot->knowledgeGrid[mi->end.y][mi->end.x].knowledge = K_EMPTY;
-    mi->robot->knowledgeGrid[mi->end.y][mi->end.x].h = 0;
-    //The cost of the start is zero.
+    mi->robot->knowledgeGrid[mi->end.y][mi->end.x].cost = 0;
+    
     mi->robot->knowledgeGrid[mi->start.y][mi->start.x].knowledge = K_EMPTY;
-    mi->robot->knowledgeGrid[mi->start.y][mi->start.x].h = 0;
-    mi->robot->knowledgeGrid[mi->start.y][mi->start.x].g = 0;
-}
-
-int inf(MazeInfo mi) {
-    return mi->robot->mazeSizeX * mi->robot->mazeSizeY + 1;
+    mi->robot->knowledgeGrid[mi->start.y][mi->start.x].cost = 0;
 }
 
 Point point_create(int x, int y) {
@@ -71,4 +69,21 @@ Point point_create(int x, int y) {
 
 int point_equal(const Point p1, const Point p2) {
     return p1.y == p2.y && p1.x == p2.x;
+}
+
+char point_move(Point *point, Moves move) {
+    switch (move) {
+    case MOVE_L:
+        (point->x)--;
+        return 'L';
+    case MOVE_R:
+        (point->x)++;
+        return 'R';
+    case MOVE_U:
+        (point->y)--;
+        return 'U';
+    case MOVE_D:
+        (point->y)++;
+        return 'D';
+    }
 }

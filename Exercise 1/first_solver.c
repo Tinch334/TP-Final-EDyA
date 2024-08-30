@@ -53,7 +53,6 @@ void no_sensor_solver(MazeInfo mi) {
 
     while (!point_equal(mi->robot->position, mi->end)) {
         Moves chosenMove;
-
         //If the robot is standing in a position then it has been visited.
         mark_position(mi, &(mi->robot->position));
 
