@@ -38,17 +38,14 @@ GDList gdlist_add_start(GDList list, void *data, CopyFunction copyFunc) {
     //This works even if the list is empty, since it will just be "NULL".
     newNode->next = list->start;
     newNode->data = copyFunc(data);
+    //The first node has no previous node.
+    newNode->prev = NULL;
 
     //If the list's not empty set the pointer of the element after this one.
     if (list->start != NULL)
         list->start->prev = newNode;
-
-    //If the list's empty the last node is the same as the first node.
-    if (list->end == NULL)
+    else
         list->end = newNode;
-
-    //We set the previous node now in case the list was empty.
-    newNode->prev = list->end;
 
     list->start = newNode;
 
@@ -75,8 +72,7 @@ GDList gdlist_delete_end(GDList list, DestroyFunction destroyFunc) {
     }
     else {
         list->end = list->end->prev;
-        //The last element has the start of the list as it's next element, the list is circular.
-        list->end->next = list->start;
+        list->end->next = NULL;
     }
 
     destroyFunc(nodeToDelete->data);

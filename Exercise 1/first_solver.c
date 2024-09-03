@@ -59,7 +59,7 @@ void no_sensor_solver(MazeInfo mi) {
         //If no valid moves where found we use the stack to go back to the previous position.
         if (!choose_move(mi, &chosenMove)) {
             //Get the previous move from the stack.
-            Moves *previousMove = malloc(sizeof(Moves));
+            Moves *previousMove;
             previousMove = stack_pop(&backtrackingStack, (DestroyFunction)move_destroy, (CopyFunction)move_copy);
 
             //If this happens it means the maze has no solution.
@@ -72,7 +72,7 @@ void no_sensor_solver(MazeInfo mi) {
             //Since we are moving to a previously visited cell we know it's valid, no need to verify.
             point_move(&(mi->robot->position), inverseMove);
 
-            free(previousMove);
+            move_destroy(previousMove);
         }
         else {
             //Perform the move to the position given by the move function, then check if it's valid. Note the use of "_Point", since "Point"
@@ -95,4 +95,6 @@ void no_sensor_solver(MazeInfo mi) {
                 mark_position(mi, &(newPosition));
         }
     }
+
+    stack_destroy(backtrackingStack, (DestroyFunction)move_destroy);
 }

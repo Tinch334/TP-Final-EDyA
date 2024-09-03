@@ -67,8 +67,9 @@ void mazeinfo_destroy(MazeInfo mi) {
     free(mi->maze->maze);
     free(mi->maze);
 
-    //Destroy the robot's hash table.
+    //Destroy the robot and it's hash table.
     htable_destroy(mi->robot->knowledgeTable);
+    free(mi->robot);
 
     free(mi);
 }

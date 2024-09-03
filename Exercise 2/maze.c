@@ -3,7 +3,6 @@
 #include <assert.h>
 #include <limits.h>
 
-
 MazeInfo mazeinfo_create(Point start, Point end, size_t sizeX, size_t sizeY) {
     MazeInfo mi = malloc(sizeof(_MazeInfo));
     assert(mi != NULL);
@@ -11,7 +10,6 @@ MazeInfo mazeinfo_create(Point start, Point end, size_t sizeX, size_t sizeY) {
     mi->start.y = start.y;
     mi->end.x = end.x;
     mi->end.y = end.y;
-
     mi->robot = malloc(sizeof(_Robot));
     assert(mi->robot != NULL);
 

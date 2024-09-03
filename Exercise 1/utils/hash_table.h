@@ -4,6 +4,8 @@
 #include "glist.h"
 #include <stdlib.h>
 
+#define MAX_LOAD_FACTOR 3
+
 
 typedef void *(*CopyFunctionHash)(void *data);
 //Returns a negative value if data1 < data2, 0 if they are equal and a positive value if data1 > data2.
@@ -30,7 +32,7 @@ HashTable htable_create(size_t size, CopyFunctionHash copy, CompareFunctionHash 
 //Returns the amount of elements in the table.
 size_t htable_elem_count(HashTable table);
 
-//Returns the size of the table
+//Returns the size of the table.
 size_t htable_size(HashTable table);
 
 //Destroys the given hash table.

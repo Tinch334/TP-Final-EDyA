@@ -11,18 +11,19 @@ CString cstring_create(size_t initialSize) {
     CString cstring = malloc(sizeof(_CString));
     assert(cstring != NULL);
 
-    cstring->string = '\0';
     cstring->size = initialSize;
     cstring->ptr = 0;
+
+    //Assign initial space for string.
+    cstring->string = malloc(cstring->size * sizeof(char));
+    assert(cstring->string);
 
     return cstring;
 }
 
 void cstring_add_char(CString cstring, char c) {
-    (cstring->size)++;
-
     //Check if we've run out of space.
-    if (cstring->ptr - 1 >= cstring->size) {
+    if (cstring->ptr + 1 >= cstring->size) {
         cstring->size = cstring->size * 2;
         cstring->string = realloc(cstring->string, sizeof(char) * cstring->size);
 

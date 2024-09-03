@@ -1,6 +1,5 @@
 #include "maze.h"
 #include "second_solver.h"
-#include "utils/queue.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <assert.h>
@@ -20,7 +19,6 @@ int main(int argc, char const *argv[])
     srand(time(NULL));
 
     MazeInfo mi = mazeinfo_create(point_create(startX, startY), point_create(endX, endY), sizeX, sizeY);
-
     sensor_solver(mi);
     
     mazeinfo_destroy(mi);

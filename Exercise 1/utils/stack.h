@@ -22,8 +22,4 @@ void stack_push(Stack *s, CopyFunction copy, void *value);
 //Pops the top element from the stack, if the stack is empty returns NULL.
 void *stack_pop(Stack *s, DestroyFunction destroyFunc, CopyFunction copyFunc);
 
-//Prints the stack.
-void stack_print(Stack s, VisitorFunction printFunc);
-
-
 #endif/* __STACK_H__ */
